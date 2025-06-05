@@ -1,0 +1,114 @@
+body {
+  background-color: #f5f5f5;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Login page */
+.center-box {
+  max-width: 600px;
+  margin: auto;
+  padding: 30px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dashboard */
+.menu-label {
+  font-weight: bold;
+  color: #4a4a4a;
+}
+
+.tab-content {
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding: 1rem 0;
+}
+
+.timeline-item {
+  display: flex;
+  margin-bottom: 1.5rem;
+}
+
+.timeline-marker {
+  position: relative;
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #00d1b2;
+  margin-right: 1rem;
+}
+
+.timeline-marker::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: calc(100% + 1.5rem);
+  background-color: #dbdbdb;
+}
+
+.timeline-item:last-child .timeline-marker::before {
+  display: none;
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-content .heading {
+  font-size: 0.8rem;
+  color: #7a7a7a;
+  margin-bottom: 0.25rem;
+}
+
+/* QR code */
+#qrcode-container {
+  margin: 1rem auto;
+  display: inline-block;
+}
+
+/* Prescription medicine */
+.prescription-medicine {
+  padding: 1rem;
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+/* Footer */
+.footer {
+  margin-top: auto;
+  padding: 1.5rem;
+  background-color: #f5f5f5;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .columns {
+    display: block;
+  }
+
+  .column.is-3,
+  .column.is-9 {
+    width: 100%;
+  }
+}

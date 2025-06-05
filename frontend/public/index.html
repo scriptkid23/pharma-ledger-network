@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmaceutical Supply Chain</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body class="has-text-centered has-text-dark has-text-weight-bold">
+    <header class="title">
+        <h1>Hệ Thống Phân Phối Thuốc</h1>
+    </header>
+    <main class="container center-box">
+        <section class="section">
+            <h2 class="title">Đăng Nhập</h2>
+            <form id="login-form">
+                <div class="field">
+                    <label class="label" for="role-select">Chọn vai trò:</label>
+                    <div class="control">
+                        <div class="select is-fullwidth">
+                            <select name="role-select" id="role-select">
+                                <option value="0">--Chọn vai trò--</option>
+                                <option value="1">Nhà sản xuất</option>
+                                <option value="2">Nhà phân phối</option>
+                                <option value="3">Nhà thuốc</option>
+                                <option value="4">Bác sĩ</option>
+                                <option value="5">Bệnh nhân</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="user-select">Chọn người dùng:</label>
+                    <div class="control">
+                        <div class="select is-fullwidth">
+                            <select name="user-select" id="user-select">
+                                <option value="">--Chọn người dùng--</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <button class="button is-primary is-fullwidth" type="submit" id="login-button">Đăng nhập</button>
+                    </div>
+                </div>
+                <div class="field">
+                    <div class="control">
+                        <button class="button is-info is-fullwidth" type="button" id="track-medicine-button">Tra cứu thuốc</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <!-- Medicine Tracking Modal -->
+    <div class="modal" id="tracking-modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Tra cứu thuốc</p>
+                <button class="delete" aria-label="close" id="close-tracking-modal"></button>
+            </header>
+            <section class="modal-card-body">
+                <div class="field">
+                    <label class="label">Nhập mã thuốc:</label>
+                    <div class="control">
+                        <input class="input" type="text" id="medicine-code" placeholder="Nhập mã QR hoặc mã vạch">
+                    </div>
+                </div>
+                <button class="button is-primary" id="search-medicine">Tra cứu</button>
+                <div id="medicine-info" class="mt-4 is-hidden">
+                    <h3 class="subtitle">Thông tin thuốc</h3>
+                    <div class="box">
+                        <p><strong>Tên thuốc:</strong> <span id="medicine-name"></span></p>
+                        <p><strong>Nhà sản xuất:</strong> <span id="medicine-manufacturer"></span></p>
+                        <p><strong>Ngày sản xuất:</strong> <span id="medicine-production-date"></span></p>
+                        <p><strong>Hạn sử dụng:</strong> <span id="medicine-expiry-date"></span></p>
+                        <p><strong>Lô sản xuất:</strong> <span id="medicine-batch"></span></p>
+                        <p><strong>Mã ghi nhận:</strong> <span id="medicine-logid"></span></p>
+                    <!-- Log ID will be added dynamically -->
+                </div>
+                <h3 class="subtitle mt-4">Lịch sử phân phối</h3>
+                <div class="timeline box">
+                    <ul id="distribution-history"></ul>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+    <footer class="footer">
+        <p>&copy; 2025 Hệ Thống Phân Phối Thuốc</p>
+    </footer>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
