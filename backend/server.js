@@ -165,6 +165,36 @@ app.post('/api/Inbound', async (req, res) => {
     }
 })
 
+app.post('/api/createPharmacyRequest', async (req, res) => {
+    const { pharmacyId, distributorId, items, token } = req.body;
+    console.log("Dữ liệu nhận được từ frontend:", req.body); // Log để kiểm tra dữ liệu đầu vào
+
+    try {
+        // Chuyển đổi mảng 'items' thành chuỗi JSON trước khi gửi đến chaincode
+        const itemsJsonString = JSON.stringify(items);
+        console.log("items đã được stringify:", itemsJsonString);
+
+        const response = await axios.post(`http://${ip.host}:${ip.fablo}/invoke/channel/transfer`, {
+            method: "SupplyChainContract:createPharmacyRequest",
+            args: [pharmacyId, distributorId, itemsJsonString] // Sử dụng chuỗi JSON ở đây
+        }, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            }
+        });
+        console.log("Yêu cầu nhà thuốc đã được tạo thành công:", response.data);
+        res.json(response.data);
+    } catch (error) {
+        // Log lỗi chi tiết hơn từ phản hồi của axios
+        console.error("Lỗi khi tạo yêu cầu:", error.response ? error.response.data : error.message);
+        return res.status(400).json({ 
+            error: "Yêu cầu không hợp lệ hoặc lỗi server.",
+            details: error.response ? error.response.data : error.message 
+        });
+    }
+});
+
 // Gọi ngay khi server khởi động
 updateAuthToken();
 
@@ -279,9 +309,38 @@ app.post('/api/getThuoc', async (req, res) => {
     }
 });
 
+app.post('/api/getInventory', async (req, res) => {
+  try {
+    const pool = await conn;
+    const result = await pool.query(`SELECT * FROM KHO`);
+    res.json(result.recordset); // Gửi kết quả về client
+  } catch (err) {
+    console.error('❌ SQL error:', err);
+    res.status(500).json({ error: 'Lỗi khi truy vấn SQL Server' });
+  }
+});
 
 
+app.post('/api/getPharmacyRequestsForDistributor', async (req, res) => {
+    try {
+        const pool = await conn;
+        const result = await pool.query(`select * from NHA_THUOC`)
+        res.json(result.recordset); // Gửi kết quả về client
+    } catch (err) {
+        console.error('❌ SQL error:', err);
+        res.status(500).json({ error: 'Lỗi khi truy vấn SQL Server' });
+    }
+})
+
+app.post('/api/getDistributorInventory', async (req, res) => {
+  try {
+    const pool = await conn;
+    const result = await pool.query(`SELECT * FROM KHO`);
+    res.json(result.recordset); // Gửi kết quả về client
+  } catch (err) {
+    console.error('❌ SQL error:', err);
+    res.status(500).json({ error: 'Lỗi khi truy vấn SQL Server' });
+  }
+});
 
 app.listen(3001);
-
-

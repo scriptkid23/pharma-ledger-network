@@ -1,9 +1,4 @@
-const ip = {
-  "host": "10.10.2.137",
-    "backend": "3001",
-    "frontend": "8080",
-    "fablo": "8801"
-};
+import { ip } from '../ip.js';
 
 const userData = {
   1: [  
@@ -26,9 +21,8 @@ const userData = {
   ],
   5: [
     // Patients
-    { id: 501, name: "Nguyễn Văn X" },
-    { id: 502, name: "Trần Thị Y" },
-    { id: 503, name: "Lê Văn Z" },
+    {id: "BN001", name: "Cấn Tất Dương"},
+    {id: "BN002", name: "Ngô Việt Dũng"}
   ],
 }
 async function getData() {
