@@ -1,0 +1,21 @@
+{
+  "name": "pmld-no-react",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "bulma": "^1.0.3",
+    "cors": "^2.8.5",
+    "ethers": "^6.13.5",
+    "express": "^5.1.0",
+    "html2canvas": "^1.4.1",
+    "mssql": "^11.0.1"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "live-server public",
+    "build": "echo 'No build step required'"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

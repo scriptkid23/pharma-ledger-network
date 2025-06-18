@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Điều Khiển - Nhà Thuốc</title> <!-- Changed Title -->
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body>
+    <nav class="navbar is-primary" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="#">
+                <strong>Hệ Thống Phân Phối Thuốc - Nhà Thuốc</strong> <!-- Changed Brand -->
+            </a>
+            
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasic">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+        
+        <div id="navbarBasic" class="navbar-menu">
+            <div class="navbar-start">
+                 <!-- Simplified Navbar for Pharmacy -->
+                <a class="navbar-item tab-link is-active" data-tab="pharmacy"> <!-- Default active tab -->
+                    Quản lý nhà thuốc
+                </a>
+                <a class="navbar-item tab-link" data-tab="medicines">
+                    Quản lý thuốc (Chung)
+                </a>
+                <a class="navbar-item tab-link" data-tab="tracking">
+                    Tra cứu thuốc (Chung)
+                </a>
+                 <a class="navbar-item tab-link" data-tab="dashboard"> <!-- Kept dashboard for overview -->
+                    Tổng quan (Chung)
+                </a>
+            </div>
+            
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <a class="button is-light" href="../index.html"> <!-- Adjusted logout path -->
+                            Đăng xuất
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-3">
+                    <aside class="menu">
+                        <p class="menu-label" id="user-role">
+                            Vai trò: Nhà Thuốc
+                        </p>
+                        <p class="menu-label" id="user-name">
+                            Tên người dùng
+                        </p>
+                        <p class="menu-label">
+                            Chức năng
+                        </p>
+                        <ul class="menu-list">
+                             <!-- Simplified Sidebar for Pharmacy -->
+                            <li><a class="tab-link is-active" data-tab="pharmacy">Quản lý nhà thuốc</a></li> <!-- Default active tab -->
+                            <li><a class="tab-link" data-tab="medicines">Quản lý thuốc (Chung)</a></li>
+                            <li><a class="tab-link" data-tab="tracking">Tra cứu thuốc (Chung)</a></li>
+                            <li><a class="tab-link" data-tab="dashboard">Tổng quan (Chung)</a></li> <!-- Kept dashboard for overview -->
+                        </ul>
+                    </aside>
+                </div>
+                
+                <div class="column is-9">
+                    <!-- Dashboard Tab (Kept for general overview) -->
+                    <div class="tab-content is-hidden" id="dashboard"> <!-- Hidden by default -->
+                        <h1 class="title">Tổng quan (Chung)</h1>
+                        <!-- Content remains, might be populated by shared JS logic -->
+                         <div class="columns">
+                            <div class="column">
+                                <div class="box has-text-centered">
+                                    <p class="heading">Tổng số loại thuốc</p>
+                                    <p class="title" id="total-medicines">...</p>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="box has-text-centered">
+                                    <p class="heading">Tổng số lô trong kho</p>
+                                    <p class="title" id="total-batches">...</p>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="box has-text-centered">
+                                    <p class="heading">Đơn hàng chờ xử lý</p>
+                                    <p class="title" id="total-orders">...</p>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="box has-text-centered">
+                                    <p class="heading">Yêu cầu nhập thuốc</p>
+                                    <p class="title" id="total-prescriptions">...</p> <!-- Re-purposed for requests -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="box" id="recent-activity">
+                            <h2 class="subtitle">Hoạt động gần đây (Chung)</h2>
+                            <div class="content">
+                                <ul id="activity-list">
+                                    <!-- Dynamic content -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                     <!-- Medicines Tab (Kept as potentially generic) -->
+                    <div class="tab-content is-hidden" id="medicines">
+                         <h1 class="title">Quản lý thuốc (Thông tin chung)</h1>
+                         <div class="box">
+                            <h2 class="subtitle">Danh sách thuốc</h2>
+                            <table class="table is-fullwidth is-striped is-hoverable">
+                                <thead>
+                                    <tr>
+                                        <th>Mã thuốc</th>
+                                        <th>Tên thuốc</th>
+                                        <th>Loại</th>
+                                        <th>Kiểu</th>
+                                        <th>Bảo quản</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="medicines-list">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tracking Tab (Kept as potentially generic) -->
+                    <div class="tab-content is-hidden" id="tracking">
+                         <h1 class="title">Tra cứu thuốc (Chung)</h1>
+                         <div class="box">
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    <input class="input" type="text" id="track-logid-input" placeholder="Nhập mã ghi nhận (Log ID)">
+                                </div>
+                                <div class="control">
+                                    <button class="button is-info" id="track-logid-button">Tra cứu</button>
+                                </div>
+                            </div>
+                            <div id="tracking-results" class="mt-4 is-hidden">
+                                <h3 class="subtitle">Thông tin chi tiết</h3>
+                                <div class="box" id="tracking-medicine-details">
+                                    <!-- Medicine details populated here -->
+                                </div>
+                                <h3 class="subtitle mt-4">Lịch sử phân phối</h3>
+                                <div class="timeline box">
+                                    <ul id="tracking-history-list">
+                                        <!-- History populated here -->
+                                    </ul>
+                                </div>
+                                <div class="mt-4 has-text-centered">
+                                     <canvas id="qr-code-canvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- REMOVED Manufacturer Tab -->
+                    <!-- REMOVED Distributor Tab -->
+                    
+                    <!-- Pharmacy Tab -->
+                    <div class="tab-content" id="pharmacy"> <!-- Default visible tab -->
+                        <h1 class="title">Quản lý nhà thuốc</h1>
+                        <div class="box">
+                            <h2 class="subtitle">Yêu cầu nhập thuốc từ nhà phân phối</h2>
+                            <form id="create-request-form">
+                                <div class="field">
+                                    <label class="label">Chọn Nhà phân phối</label>
+                                    <div class="control">
+                                        <div class="select is-fullwidth">
+                                            <select id="request-distributor">
+                                                <option value="">--Chọn nhà phân phối--</option>
+                                                <!-- Options populated by JS -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="request-items-container">
+                                    <!-- Request items will be added here by JS -->
+                                    <div class="request-item field is-grouped">
+                                        <div class="control is-expanded">
+                                            <label class="label is-small">Mã thuốc</label>
+                                            <input class="input request-medicine-id" type="text" placeholder="Nhập mã thuốc cần nhập">
+                                        </div>
+                                        <div class="control">
+                                             <label class="label is-small">Số lượng</label>
+                                            <input class="input request-quantity" type="number" min="1" placeholder="Số lượng">
+                                        </div>
+                                        <div class="control">
+                                            <label class="label is-small">&nbsp;</label> <!-- Spacer for alignment -->
+                                            <button type="button" class="button is-danger remove-request-item" disabled>&times;</button> <!-- Disabled for the first item -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="field is-grouped is-grouped-right">
+                                    <div class="control">
+                                        <button class="button is-link" type="button" id="add-request-item-button">+ Thêm thuốc</button>
+                                    </div>
+                                    <div class="control">
+                                        <button class="button is-primary" type="button" id="create-request-button">Gửi yêu cầu nhập thuốc</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="box">
+                            <h2 class="subtitle">Kho thuốc hiện tại</h2>
+                            <table class="table is-fullwidth is-striped is-hoverable">
+                                <thead>
+                                    <tr>
+                                        <th>Mã thuốc</th>
+                                        <th>Tên thuốc</th>
+                                        <th>Số lượng</th>
+                                        <th>Giá cả</th>
+                                        <th>Số điện thoại người mua</th>
+                                        <th>Đơn mua</th>
+                                        <th>Bán</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pharmacy-inventory">
+                                    <!-- Dynamic content: List of medicines in pharmacy inventory -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- REMOVED Doctor Tab -->
+                    <!-- REMOVED Patient Tab -->
+
+                     <!-- Generic Medicine Tracking Modal (copied from index.html, might need adjustment in JS) -->
+                    <div class="modal" id="tracking-modal-generic"> 
+                        <div class="modal-background"></div>
+                        <div class="modal-card">
+                            <header class="modal-card-head">
+                                <p class="modal-card-title">Tra cứu thuốc (Chung)</p>
+                                <button class="delete" aria-label="close" id="close-tracking-modal-generic"></button>
+                            </header>
+                            <section class="modal-card-body">
+                                <div class="field">
+                                    <label class="label">Nhập mã thuốc hoặc mã ghi nhận:</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="medicine-code-generic" placeholder="Nhập mã QR, mã vạch, hoặc Log ID">
+                                    </div>
+                                </div>
+                                <button class="button is-primary" id="search-medicine-generic">Tra cứu</button>
+                                <div id="medicine-info-generic" class="mt-4 is-hidden">
+                                    <h3 class="subtitle">Thông tin thuốc</h3>
+                                    <div class="box">
+                                        <p><strong>Tên thuốc:</strong> <span id="medicine-name-generic"></span></p>
+                                        <p><strong>Nhà sản xuất:</strong> <span id="medicine-manufacturer-generic"></span></p>
+                                        <p><strong>Ngày sản xuất:</strong> <span id="medicine-production-date-generic"></span></p>
+                                        <p><strong>Hạn sử dụng:</strong> <span id="medicine-expiry-date-generic"></span></p>
+                                        <p><strong>Lô sản xuất:</strong> <span id="medicine-batch-generic"></span></p>
+                                        <p><strong>Mã ghi nhận:</strong> <span id="medicine-logid-generic"></span></p>
+                                    </div>
+                                    <h3 class="subtitle mt-4">Lịch sử phân phối</h3>
+                                    <div class="timeline box">
+                                        <ul id="distribution-history-generic"></ul>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <footer class="footer">
+        <div class="content has-text-centered">
+            <p>
+                &copy; 2025 Hệ Thống Phân Phối Thuốc
+            </p>
+        </div>
+    </footer>
+    <!-- Link to the role-specific JS file -->
+    <script type="module" src="dashboard.js"></script> 
+</body>
+</html>
+

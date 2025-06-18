@@ -1,0 +1,72 @@
+{
+  "$schema": "https://github.com/hyperledger-labs/fablo/releases/download/2.1.0/schema.json",
+  "global": {
+    "fabricVersion": "2.5.9",
+    "tls": true,
+    "engine": "docker",
+    "peerDevMode": false,
+    "tools": {"explorer": true}
+  },
+  "orgs": [
+    {
+      "organization": {"name": "Order", "domain": "orderer.manage.com"},
+      "orderers": [
+        {"groupName": "order", "type": "raft", "instances": 2}
+      ],
+      "tools": {"fabloRest": true}
+    },
+    {
+      "organization": {"name": "Manufacturer", "domain": "manufacturer.organization.com"},
+      "orderers": [
+        {"groupName": "order", "type": "raft", "instances": 2}
+      ],
+      "peer": {"instances": 2, "db": "LevelDb"},
+      "tools": {"fabloRest": true}
+    },
+    {
+      "organization": {"name": "Pharmacy", "domain": "pharmacy.organization.com"},
+      "orderers": [
+        {"groupName": "order", "type": "raft", "instances": 2}
+      ],
+      "peer": {"instances": 2, "db": "LevelDb"},
+      "tools": {"fabloRest": true}
+    },
+    {
+      "organization": {"name": "StorageA", "domain": "storagea.organization.com"},
+      "orderers": [
+        {"groupName": "order", "type": "raft", "instances": 2}
+      ],
+      "peer": {"instances": 2, "db": "LevelDb"},
+      "tools": {"fabloRest": true}
+    },
+    {
+      "organization": {"name": "StorageB", "domain": "storageb.organization.com"},
+      "orderers": [
+        {"groupName": "order", "type": "raft", "instances": 2}
+      ],
+      "peer": {"instances": 2, "db": "LevelDb"},
+      "tools": {"fabloRest": true}
+    }
+  ],
+  "channels": [
+    {
+      "name": "channel",
+      "orgs": [
+        {"name": "Manufacturer", "peers": ["peer0", "peer1"]},
+        {"name": "Pharmacy", "peers": ["peer0", "peer1"]},
+        {"name": "StorageA", "peers": ["peer0", "peer1"]},
+        {"name": "StorageB", "peers": ["peer0", "peer1"]}
+      ]
+    }
+  ],
+  "chaincodes": [
+    {
+      "name": "transfer",
+      "version":"1.0.0",
+      "lang":"node",
+      "channel": "channel",
+      "directory": "./chaincode",
+      "endorsement": "OR('ManufacturerMSP.member','PharmacyMSP.member','StorageAMSP.member','StorageBMSP.member')"
+    }
+  ]
+}
