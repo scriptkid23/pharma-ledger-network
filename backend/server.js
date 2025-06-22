@@ -86,8 +86,12 @@ setInterval(updateAuthToken, 10 * 60 * 1000);
  * @returns {Array<Object>} - Mảng các bản ghi thuốc từ sổ cái.
  * @throws {Error} - Ném lỗi nếu có vấn đề khi gọi API hoặc parse dữ liệu.
  */
+let allMedicines = []; // Biến toàn cục để lưu trữ tất cả bản ghi thuốc
 async function _fetchAndParseAllMedicinesFromLedger(token, port) {
     try {
+        // if (allMedicines.length > 0) {
+        //     return allMedicines; // Trả về dữ liệu đã lưu nếu đã có
+        // }
         console.log(`Debug: Calling Fablo REST at ${FABLO_REST_URL}${port}/invoke/channel/transfer`);
         const response = await axios.post(`${FABLO_REST_URL}${port}/invoke/channel/transfer`, {
             method: "SupplyChainContract:getAllMedicines",
@@ -136,7 +140,7 @@ async function _fetchAndParseAllMedicinesFromLedger(token, port) {
             console.error(`Lỗi: Dữ liệu sau khi parse không phải là mảng: ${typeof parsedMedicines}`);
             throw new Error("Dữ liệu trả về từ smart contract không phải là mảng.");
         }
-
+        allMedicines = parsedMedicines; // Lưu vào biến toàn cục để sử dụng lại
         return parsedMedicines;
 
     } catch (error) {
@@ -626,51 +630,57 @@ app.post('/api/createPharmacyRequest', async (req, res) => {
 /**
  * API ghi lại việc tiêu thụ (bán ra) thuốc tại một địa điểm.
  * @route POST /api/consumeQuantity
- * @body {string} logId - ID log của bản ghi thuốc đang được tiêu thụ. (Nếu muốn consume theo medicineId, cần logic phức tạp hơn để tìm logId)
- * @body {string} locationId - ID của thực thể tiêu thụ/bán thuốc (ví dụ: ID nhà thuốc).
  * @body {string} consumerId - ID của người tiêu dùng (ví dụ: ID bệnh nhân).
- * @body {number} quantity - Số lượng thuốc đã tiêu thụ.
- * @body {number} price - Giá mà thuốc đã được tiêu thụ/bán.
- * @body {string} token - Token xác thực của PharmacyMSP, StorageAMSP hoặc StorageBMSP.
+ * @body {string} locationId - ID của thực thể tiêu thụ/bán thuốc (ví dụ: ID nhà thuốc).
+ * @body {Array<Object>} prescription - Danh sách các thuốc đã mua.
+ * @body {string} token - Token xác thực của PharmacyMSP.
  * @body {string} port - Cổng Fablo REST API cụ thể của người gọi (Pharmacy).
  */
 app.post('/api/consumeQuantity', async (req, res) => {
-    const { medicineId, locationId, consumerId, quantity, price, token, port } = req.body;
-    // Lưu ý: Smart contract hiện tại yêu cầu logId để consume. Nếu muốn consume chỉ bằng medicineId,
-    // frontend cần gửi logId của một lô thuốc cụ thể từ tồn kho, HOẶC smart contract cần được điều chỉnh.
+    const { consumerId, locationId, prescription, token, port } = req.body;
+    
     console.log("Dữ liệu nhận được từ frontend cho consumeQuantity:", req.body);
-    if (!medicineId || !locationId || !consumerId || !quantity || !price) {
-        return res.status(400).json({ error: "Thiếu các trường bắt buộc để tiêu thụ thuốc." });
+
+    if (!consumerId || !locationId || !prescription || !Array.isArray(prescription) || prescription.length === 0) {
+        return res.status(400).json({ error: "Missing required fields (consumerId, locationId, prescription) or 'prescription' is invalid." });
     }
     if (!token) {
-        return res.status(401).json({ error: "Thiếu token xác thực. Yêu cầu token của PharmacyMSP, StorageAMSP hoặc StorageBMSP." });
+        return res.status(401).json({ error: "Missing authentication token. Requires PharmacyMSP token." });
     }
-    if (!port) { // Yêu cầu cổng cụ thể để biết gọi Fablo REST instance nào
-        return res.status(400).json({ error: "Thiếu thông tin cổng Fablo REST API (port) của người gọi." });
+    if (!port) { 
+        return res.status(400).json({ error: "Missing Fablo REST API port information for the caller." });
     }
 
-    console.log("Đang gửi yêu cầu consumeQuantity...");
     try {
-        const response = await axios.post(`${FABLO_REST_URL}${port}/invoke/channel/transfer`, {
-            method: "SupplyChainContract:consumeQuantity",
-            args: [medicineId, locationId, consumerId, quantity.toString(), price.toString()]
+        // Chuyển đối tượng prescription thành chuỗi JSON để truyền vào smart contract
+        const prescriptionJsonString = JSON.stringify(prescription);
+
+        const response = await axios.post(`${FABLO_REST_URL}${ip.fablo}/invoke/channel/transfer`, { //test
+            method: "SupplyChainContract:consumeQuantityAll", // Tên hàm Smart Contract mới
+            args: [
+                locationId, 
+                consumerId, 
+                prescriptionJsonString // Truyền toàn bộ đơn thuốc dưới dạng JSON string
+            ]
         }, {
             headers: {
-                "Authorization": `Bearer ${token}`, 
+                "Authorization": `Bearer ${AUTH_TOKEN}`, 
                 "Content-Type": "application/json"
             }
         });
+        
+        // Smart Contract sẽ trả về kết quả xử lý cho từng item trong đơn thuốc
         res.json(response.data);
-        console.log("Thuốc đã được tiêu thụ thành công:", response.data);
+        console.log("Xử lý tiêu thụ hoàn tất qua Smart Contract:", response.data);
+
     } catch (error) {
-        console.error("Lỗi khi tiêu thụ thuốc:", error.response ? error.response.data : error.message);
+        console.error("❌ Lỗi tổng quan khi xử lý tiêu thụ thuốc:", error.response ? error.response.data : error.message);
         res.status(error.response ? error.response.status : 500).json({ 
-            error: "Không thể tiêu thụ thuốc trên sổ cái.", 
+            error: "Failed to process medicine consumption via Smart Contract.", 
             details: error.response ? error.response.data : error.message 
         });
     }
 });
-
 /**
  * API truy xuất tồn kho của một nhà thuốc cụ thể.
  * Nó sẽ gọi getAllMedicines từ smart contract, sau đó lọc ra các giao dịch PharmacyDelivery
@@ -762,35 +772,28 @@ app.post('/api/getPatientPurchaseHistory', async (req, res) => {
             }
         }
 
-        const allMedicines = await _fetchAndParseAllMedicinesFromLedger(AUTH_TOKEN, ip.fablo);
-        // Lọc các bản ghi PharmacyDelivery
-        const pharmacyDeliveries = allMedicines.filter(record => {
-            const isDelivery = record.action == 'PharmacyDelivery';
-            const isToTargetPharmacy = pharmacyId ? (record.toId === pharmacyId) : true; // Lọc theo pharmacyId nếu được cung cấp
-            return isDelivery && isToTargetPharmacy;
-        });
-        let purchaseHistory = [];
-        // Duyệt qua các bản ghi PharmacyDelivery và trích xuất các sự kiện CONSUME của bệnh nhân
-        for (const delivery of pharmacyDeliveries) {
-            if (Array.isArray(delivery.consumptionDetails)) {
-                for (const detail of delivery.consumptionDetails) {
-                    if (detail.type == 'CONSUME' && detail.consumerId == patientId) {
-                        purchaseHistory.push({
-                            medicineId: delivery.medicineId,
-                            batchId: delivery.batchId,
-                            quantity: detail.quantity,
-                            price: detail.price,
-                            timestamp: detail.timestamp,
-                            locationId: detail.locationId, // Nhà thuốc nơi mua hàng
-                            txId: delivery.txId // ID giao dịch PharmacyDelivery gốc
-                        });
-                    }
-                }
+        const response = await axios.post(`${FABLO_REST_URL}${ip.fablo}/invoke/channel/transfer`, { //test
+            method: "SupplyChainContract:getSalesInvoices", // Tên hàm Smart Contract mới
+            args: []
+        }, {
+            headers: {
+                "Authorization": `Bearer ${AUTH_TOKEN}`, 
+                "Content-Type": "application/json"
             }
-        }
-        console.log(purchaseHistory);
-        console.log(`Tìm thấy ${purchaseHistory.length} giao dịch mua hàng cho bệnh nhân ${patientId}${pharmacyId ? ` tại nhà thuốc ${pharmacyId}` : ''}.`);
-        res.json(purchaseHistory);
+        });
+        const allSalesInvoices = response.data.response;
+        console.log(allSalesInvoices);
+
+        // Lọc các hóa đơn theo consumerId và optionally locationId
+        const filteredInvoices = allSalesInvoices.filter(invoice => {
+            const isConsumerMatch = invoice.consumerId === patientId;
+            const isLocationMatch = pharmacyId ? (invoice.locationId === pharmacyId) : true;
+            const isCorrect = invoice.status != 'PARTIALLY_FULFILLED'; // Chỉ lấy các giao dịch đã thanh toán hoặc hoàn thành
+            return isConsumerMatch && isLocationMatch && isCorrect;
+        });
+
+        console.log(`Tìm thấy ${filteredInvoices.length} giao dịch mua hàng cho bệnh nhân ${patientId}${pharmacyId ? ` tại nhà thuốc ${pharmacyId}` : ''}.`);
+        res.json(filteredInvoices);
 
     } catch (error) {
         console.error("Lỗi khi lấy lịch sử mua hàng của bệnh nhân:", error.message);

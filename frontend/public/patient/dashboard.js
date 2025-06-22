@@ -225,11 +225,10 @@ async function loadPatientData(userId) {
         }
 
         tr.innerHTML = `
-            <td>${order.txId}</td>
-            <td>${getPharmacyNameById(order.locationId)}</td>
+            <td>${order.invoiceId}</td>
             <td>${formatDate(order.timestamp)}</td>
             <td>Hoàn Thành</td>
-            <td><button class="button is-small is-info view-order-details" data-order-id="${order.txId}">Xem</button></td>
+            <td><button class="button is-small is-info view-order-details" data-order-id="${order.invoiceId}">Xem</button></td>
         `;
         ordersTableBody.appendChild(tr);
     });
@@ -502,27 +501,32 @@ function setupTrackingEventListeners() {
     }
 }
 
+document.addEventListener("click", (event) => {
+  if (event.target.classList.contains("view-order-details")) {
+    const orderId = event.target.dataset.orderId;
+    console.log("🔍 Đang xem chi tiết đơn hàng:", orderId);
 
-function addViewOrderDetailsListeners() {
-    document.querySelectorAll('.view-order-details').forEach(button => {
-        button.onclick = () => {
-            const orderId = button.dataset.orderId;
-            if (!orderId) {
-                alert("Không tìm thấy mã đơn hàng.");
-                return;
-            }
+    if (!orderId) {
+      alert("Không tìm thấy mã đơn hàng.");
+      return;
+    }
 
-            // Gọi hàm xử lý với txId
-            handleViewOrderDetails(orderId);
-        };
-    });
-}
+    try {
+      handleViewOrderDetails(orderId);
+    } catch (err) {
+      console.error("❌ Lỗi khi xử lý đơn hàng:", err);
+      alert("Có lỗi xảy ra khi xem chi tiết đơn hàng.");
+    }
+  }
+});
+
+
 function handleViewOrderDetails(txId) {
     console.log("🔍 Đang xem chi tiết đơn hàng:", txId);
-    switchToTab("tracking");
-    const trackInput = document.getElementById('track-logid-input');
+    switchToTab("tracking-patient");
+    const trackInput = document.getElementById('track-patient-input');
     trackInput.value = txId; // Set the input to the order ID
-    const trackButton = document.getElementById('track-logid-button');
+    const trackButton = document.getElementById('track-patient-input');
     if (trackButton) {
         trackButton.click(); // Trigger the tracking logic
     }
@@ -532,6 +536,72 @@ function handleViewOrderDetails(txId) {
 document.getElementById('pharmacyFilter').addEventListener('change', () => {
     const params = new URLSearchParams(window.location.search);
   loadPatientData(params.get("userId"));
+});
+
+document.getElementById("track-patient-button").addEventListener("click", async () => {
+  const input = document.getElementById("track-patient-input").value.trim();
+  if (!input) {
+    alert("Vui lòng nhập mã giao dịch.");
+    return;
+  }
+
+  try {
+    
+    const result = patientOrders.find(order => order.invoiceId === input);
+    console.log("🔍 Kết quả tìm kiếm:", result);
+    if (!result || !result.invoiceId) {
+      alert("Không tìm thấy hóa đơn.");
+      return;
+    }
+
+    const invoice = result;
+
+    // 📦 Render bảng chi tiết giao dịch
+    const detailBox = document.getElementById("tracking-patient-details");
+    detailBox.innerHTML = `
+      <p><strong>Mã hóa đơn:</strong> ${invoice.invoiceId}</p>
+      <p><strong>Người mua (SĐT):</strong> ${invoice.consumerId}</p>
+      <p><strong>Địa điểm bán:</strong> ${invoice.locationId}</p>
+      <p><strong>Thời gian:</strong> ${new Date(invoice.timestamp).toLocaleString()}</p>
+      <p><strong>Tổng tiền:</strong> ${invoice.totalAmount} VNĐ</p>
+      <p><strong>Trạng thái:</strong> ${invoice.status}</p>
+      <h4 class="subtitle mt-3">Danh sách thuốc:</h4>
+      <table class="table is-striped is-fullwidth">
+        <thead><tr><th>Mã thuốc</th><th>Tên thuốc</th><th>Số lượng yêu cầu</th>SL yêu cầu<th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+        <tbody>
+          ${invoice.items.map(item => `
+            <tr>
+              <td>${item.medicineId}</td>
+              <td>${medicineDatabase[item.medicineId]?.name || "Không xác định"}</td>
+              <td>${item.requestedQuantity}</td>
+              <td>${item.pricePerUnit}</td>
+              <td>${item.totalPrice}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+
+    // 📦 Render lịch sử phân phối nếu có sourceLogIds
+    const historyList = document.getElementById("tracking-patient-list");
+    historyList.innerHTML = "";
+    invoice.items.forEach(item => {
+      if (item.sourceLogIds && item.sourceLogIds.length > 0) {
+        item.sourceLogIds.forEach((itemMed) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<strong>${item.medicineId}</strong> lấy từ lô hàng có log <code>${itemMed.logId} với ${itemMed.quantity} đơn vị thuốc</code>`;
+          historyList.appendChild(li);
+        });
+      }
+    });
+
+    // Hiện vùng kết quả
+    document.getElementById("tracking-patient-results").classList.remove("is-hidden");
+
+  } catch (err) {
+    console.error("Lỗi khi tra cứu:", err);
+    alert("Có lỗi xảy ra khi tra cứu.");
+  }
 });
 
 
@@ -552,7 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await getData(); // Fetch pharmacies for display
   await getDataMedicine(); // Fetch general medicine info
   await loadPatientData(userId); // Load patient-specific orders
-  await addViewOrderDetailsListeners();
+
   // Setup tab navigation
   setupTabNavigation();
 

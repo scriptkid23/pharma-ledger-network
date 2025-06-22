@@ -28,6 +28,9 @@
                 <a class="navbar-item tab-link is-active" data-tab="pharmacy"> <!-- Default active tab -->
                     Quản lý nhà thuốc
                 </a>
+                <a class="navbar-item tab-link is-active" data-tab="pharmacy-out"> <!-- Default active tab -->
+                    Kê đơn thuốc
+                </a>
                 <a class="navbar-item tab-link" data-tab="medicines">
                     Quản lý thuốc (Chung)
                 </a>
@@ -68,6 +71,7 @@
                         <ul class="menu-list">
                              <!-- Simplified Sidebar for Pharmacy -->
                             <li><a class="tab-link is-active" data-tab="pharmacy">Quản lý nhà thuốc</a></li> <!-- Default active tab -->
+                            <li><a class="tab-link" data-tab="pharmacy-out">Kê đơn thuốc</a></li> <!-- Default active tab -->
                             <li><a class="tab-link" data-tab="medicines">Quản lý thuốc (Chung)</a></li>
                             <li><a class="tab-link" data-tab="tracking">Tra cứu thuốc (Chung)</a></li>
                             <li><a class="tab-link" data-tab="dashboard">Tổng quan (Chung)</a></li> <!-- Kept dashboard for overview -->
@@ -239,8 +243,57 @@
                         </div>
                     </div>
                     
-                    <!-- REMOVED Doctor Tab -->
-                    <!-- REMOVED Patient Tab -->
+                    <div class="tab-content is-hidden" id="pharmacy-out">
+                        <h1 class="title">Kê đơn thuốc</h1>
+
+                        <!-- Tìm bệnh nhân -->
+                        <div class="box">
+                            <h2 class="subtitle">Tìm bệnh nhân</h2>
+                            <div class="field has-addons">
+                            <div class="control is-expanded">
+                                <input id="patient-phone-input" class="input" type="text" placeholder="Nhập số điện thoại bệnh nhân">
+                            </div>
+                            <div class="control">
+                                <button id="search-patient-btn" class="button is-primary">Tìm</button>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin bệnh nhân -->
+                        <div id="patient-info-section" class="box is-hidden">
+                            <h2 class="subtitle">Thông tin bệnh nhân</h2>
+                            <p id="patient-name">Họ tên: </p>
+                            <p id="patient-phone">SĐT: </p>
+                            <p id="patient-id">Mã bệnh nhân: </p>
+                        </div>
+
+                        <!-- Form kê đơn -->
+                        <div id="medicine-request-section" class="box">
+                            <h2 class="subtitle">Đơn thuốc</h2>
+                            <form id="prescription-form">
+                            <table class="table is-fullwidth is-striped is-hoverable">
+                                <thead>
+                                <tr>
+                                    <th>Mã thuốc</th>
+                                    <th>Tên thuốc</th>
+                                    <th>Giá (VNĐ)</th>
+                                    <th>Số lượng muốn kê</th>
+                                    <th>Xóa</th>
+                                </tr>
+                                </thead>
+                                <tbody id="requested-medicine-list">
+                                <!-- JS sẽ tự thêm dòng thuốc -->
+                                </tbody>
+                            </table>
+                            <div class="buttons">
+                                <button class="button is-link" type="button" id="add-item-button">+ Thêm thuốc</button>
+                                <button type="submit" class="button is-success">💊 Kê đơn</button>
+                            </div>
+                            </form>
+                        </div>
+                        </div>
+
+
 
                      <!-- Generic Medicine Tracking Modal (copied from index.html, might need adjustment in JS) -->
                     <div class="modal" id="tracking-modal-generic"> 

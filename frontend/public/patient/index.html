@@ -28,6 +28,9 @@
                 <a class="navbar-item tab-link is-active" data-tab="patient"> <!-- Default active tab -->
                     Đơn hàng đã đặt
                 </a>
+                <a class="navbar-item tab-link" data-tab="tracking-patient">
+                    Tra cứu giao dịch
+                </a>
                 <a class="navbar-item tab-link" data-tab="tracking">
                     Tra cứu thuốc (Chung)
                 </a>
@@ -66,6 +69,7 @@
                         <ul class="menu-list">
                              <!-- Simplified Sidebar for Patient -->
                             <li><a class="tab-link is-active" data-tab="patient">Đơn hàng đã đặt</a></li> <!-- Default active tab -->
+                            <li><a class="tab-link" data-tab="tracking-patient">Tra cứu giao dịch</a></li>
                             <li><a class="tab-link" data-tab="tracking">Tra cứu thuốc (Chung)</a></li>
                             <li><a class="tab-link" data-tab="dashboard">Tổng quan (Chung)</a></li> <!-- Kept dashboard for overview -->
                              <!-- Removed Medicines List from Sidebar -->
@@ -114,8 +118,35 @@
                         </div>
                     </div>
 
-                     <!-- REMOVED Medicines Tab -->
-
+                    <!-- Tracking Tab for Patient -->
+                    <div class="tab-content is-hidden" id="tracking-patient">
+                        <h1 class="title">Tra cứu giao dịch</h1>
+                        <div class="box">
+                            <div class="field has-addons">
+                            <div class="control is-expanded">
+                                    <input class="input" type="text" id="track-patient-input" placeholder="Nhập mã giao dịch trên hóa đơn">
+                                </div>
+                                <div class="control">
+                                    <button class="button is-info" id="track-patient-button">Tra cứu</button>
+                                </div>
+                            </div>
+                            <div id="tracking-patient-results" class="mt-4 is-hidden">
+                                <h3 class="subtitle">Thông tin chi tiết</h3>
+                                <div class="box" id="tracking-patient-details">
+                                    <!-- Medicine details populated here -->
+                                </div>
+                                <h3 class="subtitle mt-4">Đơn hàng</h3>
+                                <div class="timeline box">
+                                    <ul id="tracking-patient-list">
+                                        <!-- History populated here -->
+                                    </ul>
+                                </div>
+                                <div class="mt-4 has-text-centered">
+                                     <canvas id="qr-code-canvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Tracking Tab (Kept as potentially generic) -->
                     <div class="tab-content is-hidden" id="tracking">
                          <h1 class="title">Tra cứu thuốc (Chung)</h1>
@@ -171,7 +202,6 @@
                                 <thead>
                                     <tr>
                                         <th>Mã đơn hàng</th>
-                                        <th>Nhà thuốc</th>
                                         <th>Ngày đặt</th>
                                         <th>Trạng thái</th>
                                         <th>Chi tiết</th>

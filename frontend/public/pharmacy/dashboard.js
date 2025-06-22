@@ -6,10 +6,7 @@ let userData = {
   2: [], // Distributors - Will be populated by getData (for requests)
   3: [], // Pharmacies - Will be populated by getData
   // 4: [], // Doctors (Might need for order approval context)
-  5: [
-    {id: "BN001", name: "Cấn Tất Dương"},
-    {id: "BN002", name: "Ngô Việt Dũng"}
-  ], // Patients - Will be populated by getData (for orders)
+  5: [], // Patients - Will be populated by getData (for orders)
 };
 
 // Keep general medicine info
@@ -26,12 +23,12 @@ async function getData() {
     // const nsx = await fetch(`http://${ip.host}:${ip.backend}/api/getNhaSanXuat`).then(res => res.json());
     const npp = await fetch(`http://${ip.host}:${ip.backend}/api/getNhaPhanPhoi`).then(res => res.json());
     const nt = await fetch(`http://${ip.host}:${ip.backend}/api/getNhaThuoc`).then(res => res.json());
-    // const bn = await fetch(`http://${ip.host}:${ip.backend}/api/getBenhNhan`).then(res => res.json()); // ASSUMED API for patients
+    const bn = await fetch(`http://${ip.host}:${ip.backend}/api/getBenhNhan`).then(res => res.json()); // ASSUMED API for patients
     
     // userData[1] = nsx.map(item => ({ id: item.MA_NHASX, name: item.TEN_NHASX }));
     userData[2] = npp.map(item => ({ id: item.MA_NHAPP, name: item.TEN_NHAPP }));
     userData[3] = nt.map(item => ({ id: item.MA_NHA_THUOC, name: item.TEN_NHA_THUOC }));
-    // userData[5] = bn.map(item => ({ id: item.MA_BENH_NHAN, name: item.TEN_BENH_NHAN })); // ASSUMED patient structure
+    userData[5] = bn.map(item => ({ id: item.SO_DIEN_THOAI, info: item })); // ASSUMED patient structure
 
   } catch (error) {
     console.error("Error fetching user data:", error);
@@ -161,8 +158,9 @@ function getDistributorNameById(distributorId) {
 }
 
 function getPatientNameById(patientId) {
-    const patient = userData[5]?.find(p => p.id === patientId);
-    return patient ? patient.name : `Bệnh nhân ${patientId}`;
+    const patient = userData[5]?.find(p => p.id == patientId);
+    console.log(patient);
+    return patient;
 }
 
 function formatDate(dateString) {
@@ -344,11 +342,11 @@ async function handleSell(medicineId, userId, button, token) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      medicineId,
       locationId: userId, // giả sử đây là pharmacyId
       consumerId: phone,
-      quantity,
-      price,
+      prescription: [
+        { code: medicineId, price, quantity }
+    ],
       token,
       port: ip.pharmacy // Port for pharmacy service
     })
@@ -718,6 +716,144 @@ function setupTrackingEventListeners() {
 }
 
 
+// Hàm kê đơn thuốc 
+
+document.getElementById("search-patient-btn").addEventListener("click", async () => {
+  const phone = document.getElementById("patient-phone-input").value;
+  if (!phone) return alert("Nhập số điện thoại đi má!");
+
+  // Gọi API kiểm tra bệnh nhân
+//   const res = await fetch(`/api/getPatientByPhone?phone=${phone}`);
+  const data = getPatientNameById(phone); // Giả sử đây là hàm lấy thông tin bệnh nhân từ userData
+
+  if (!data) return alert("Không tìm thấy bệnh nhân");
+
+  // Hiện thông tin
+  document.getElementById("patient-info-section").classList.remove("is-hidden");
+  document.getElementById("patient-name").innerText = "Họ tên: " + data.info.TEN_BENHNHAN;
+  document.getElementById("patient-phone").innerText = "Giới tính: " + data.info.GIOI_TINH;
+  document.getElementById("patient-id").innerText = "Tuổi: " + data.info.TUOI;
+
+  // Gọi API lấy đơn yêu cầu thuốc
+  const medRes = await fetch(`/api/getMedicineRequests?patientId=${data.patient.id}`);
+  const meds = await medRes.json();
+
+  const tbody = document.getElementById("requested-medicine-list");
+  tbody.innerHTML = "";
+  meds.forEach((med, i) => {
+    tbody.innerHTML += `
+      <tr>
+        <td><input type="checkbox" name="select_${i}" value="${med.id}"></td>
+        <td>${med.code}</td>
+        <td>${med.name}</td>
+        <td>${med.requestedQuantity}</td>
+        <td>${med.price}</td>
+        <td><input type="number" name="quantity_${med.id}" min="0" max="${med.requestedQuantity}" class="input is-small"></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("medicine-request-section").classList.remove("is-hidden");
+});
+
+// Gửi đơn thuốc
+function submitPrescription(userId, token, port) {
+  const phone = document.getElementById("patient-phone-input").value.trim();
+  if (!phone) {
+    alert("Vui lòng nhập số điện thoại bệnh nhân!");
+    return;
+  }
+
+  const rows = document.querySelectorAll("#requested-medicine-list tr");
+  const selectedMeds = [];
+  rows.forEach((row) => {
+    const codeInput = row.querySelector("input[name='medicineCode[]']");
+    const priceInput = row.querySelector("input[name='medicinePrice[]']");
+    const qtyInput = row.querySelector("input[name='quantity[]']");
+
+    const code = codeInput?.value.trim();
+    const price = parseFloat(priceInput?.value);
+    const quantity = parseInt(qtyInput?.value);
+    if (code && quantity > 0) {
+      selectedMeds.push({ code, price, quantity });
+    }
+  });
+
+  if (selectedMeds.length === 0) {
+    return alert("Bạn chưa nhập loại thuốc nào hợp lệ để kê đơn!");
+  }
+
+  // Gửi API
+  fetch(`http://${ip.host}:${ip.backend}/api/consumeQuantity`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      consumerId: phone,
+      locationId: userId,
+      prescription: selectedMeds,
+      token,
+      port
+    }),
+  })
+    .then((res) => res.json())
+    .then((result) => {
+      if (result.success) {
+        alert("Đã kê đơn thành công!");
+        location.reload();
+      } else {
+        alert("Lỗi kê đơn: " + result.message);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Lỗi kết nối đến máy chủ.");
+    });
+}
+
+// Gắn sự kiện khi nhấn nút "Thêm thuốc"
+document.getElementById("add-item-button").addEventListener("click", () => {
+    console.log("Adding new request item row");
+  const tbody = document.getElementById("requested-medicine-list");
+  
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input type="text" name="medicineCode[]" class="input is-small" placeholder="Mã thuốc"></td>
+    <td type="text" name="medicineName[]" class="is-small"></td>
+    <td><input type="number" name="medicinePrice[]" class="input is-small" placeholder="Giá" min="0" step="100"></td>
+    <td><input type="number" name="quantity[]" class="input is-small" placeholder="Số lượng" min="1"></td>
+    <td><button type="button" class="button is-danger is-small remove-request-item">&times;</button></td>
+  `;
+  tbody.appendChild(row);
+});
+
+document.getElementById("requested-medicine-list").addEventListener("blur", (e) => {
+  if (e.target && e.target.name === "medicineCode[]") {
+    const code = e.target.value.trim();
+    const row = e.target.closest("tr");
+
+    const nameCell = row.querySelector("td:nth-child(2)"); // cell chứa tên thuốc
+    const priceInput = row.querySelector("input[name='medicinePrice[]']");
+
+    const info = medicineDatabase[code]
+    nameCell.innerText = info.name;
+    priceInput.value = 10000;
+  }
+}, true); // dùng `true` để bắt được blur (sự kiện không bubble)
+
+// Xóa dòng khi nhấn nút ❌
+document.getElementById("requested-medicine-list").addEventListener("click", (e) => {
+  if (e.target && e.target.classList.contains("remove-request-item")) {
+    const row = e.target.closest("tr");
+    const totalRows = document.querySelectorAll("#requested-medicine-list tr").length;
+    if (totalRows > 1) {
+      row.remove();
+    } else {
+      alert("Phải có ít nhất 1 thuốc trong đơn.");
+    }
+  }
+});
+
+
 // --- Main Initialization --- 
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -764,6 +900,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadPharmacyData(userId, token); // Load inventory and orders
   loadDashboardData(); // Load overview stats (after pharmacy data is loaded)
   loadMedicinesData(); // Load general medicine list
+  console.log(userData[5]);
+  document.getElementById("add-request-item-button").click();
 
   // Setup event listeners
   setupPharmacyEventListeners(userId, token);
@@ -775,6 +913,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         handleSell(medicineId, userId, button, token);
     });
     });
+    document.getElementById("prescription-form").addEventListener("submit", async (e) => {
+        e.preventDefault(); // Ngăn chặn gửi form mặc định
+        submitPrescription(userId, token, ip.pharmacy); // Gọi hàm kê đơn
+    })
 });
 
 console.log("Pharmacy Dashboard JS Loaded");

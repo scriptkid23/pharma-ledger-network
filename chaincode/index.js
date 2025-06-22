@@ -465,8 +465,8 @@ class SupplyChainContract extends Contract {
      * @param {string} [batchId] Tùy chọn: ID lô cụ thể nếu muốn tiêu thụ từ một lô nhất định.
      * @returns {string} Chuỗi JSON tóm tắt các bản ghi đã được tiêu thụ.
      */
-    async consumeQuantity(ctx, medicineId, locationId, consumerId, quantity, price, batchId = null) {
-        this._requireMSP(ctx, ['PharmacyMSP']);
+    async _consumeQuantity(ctx, medicineId, locationId, consumerId, quantity, price, batchId = null) {
+        // this._requireMSP(ctx, ['PharmacyMSP']);
 
         const amountToConsume = Number(quantity);
         const numericPrice = Number(price);
@@ -551,6 +551,151 @@ class SupplyChainContract extends Contract {
             consumedLogs: consumedLogs
         });
     }
+
+    /**
+     * Processes a full prescription, creating a single SalesInvoice record and consuming
+     * items from available stock. This function orchestrates multiple calls to consumeQuantity.
+     *
+     * @param {Context} ctx The transaction context.
+     * @param {string} locationId - ID of the consuming/selling entity (e.g., pharmacy ID).
+     * @param {string} consumerId - ID of the consumer (e.g., patient ID).
+     * @param {string} prescriptionJsonString - JSON string containing a list of medicines purchased.
+     * Example: '[{"code": "ABC123", "price": 10000, "quantity": 2}, {"code": "XYZ456", "price": 15000, "quantity": 1}]'
+     * @returns {string} JSON string of the newly created SalesInvoice record.
+     */
+    async consumeQuantityAll(ctx, locationId, consumerId, prescriptionJsonString) {
+        this._requireMSP(ctx, ['ManufacturerMSP', 'PharmacyMSP']);
+
+        if (!locationId || !consumerId || !prescriptionJsonString) {
+            throw new Error('Missing required fields (locationId, consumerId, prescriptionJsonString).');
+        }
+
+        let prescriptionItems;
+        try {
+            prescriptionItems = JSON.parse(prescriptionJsonString);
+            if (!Array.isArray(prescriptionItems) || prescriptionItems.length === 0) {
+                throw new Error('Prescription is invalid or empty.');
+            }
+        } catch (error) {
+            throw new Error(`Error parsing JSON prescription: ${error.message}`);
+        }
+
+        const invoiceId = ctx.stub.getTxID(); // Unique transaction ID for this invoice
+        const saleTimestamp = new Date().toISOString();
+        let totalAmount = 0;
+        const salesInvoiceItems = [];
+        const unfulfilledItems = [];
+
+        for (const item of prescriptionItems) {
+            const medicineCode = item.code;
+            const requestedQuantity = item.quantity;
+            const itemPrice = item.price;
+            const itemBatchId = item.batchId || null;
+
+            if (requestedQuantity <= 0) {
+                unfulfilledItems.push({ 
+                    medicineId: medicineCode, 
+                    requestedQuantity: item.quantity,
+                    fulfilledQuantity: 0,
+                    remainingQuantity: item.quantity,
+                    message: 'Invalid requested quantity (less than or equal to 0).' 
+                });
+                continue;
+            }
+
+            try {
+                // Call the low-level consumeQuantity for each item
+                const consumptionResultJson = await this._consumeQuantity(
+                    ctx, medicineCode, locationId, consumerId, requestedQuantity, itemPrice, itemBatchId, invoiceId
+                );
+                const consumptionResult = JSON.parse(consumptionResultJson);
+
+                if (consumptionResult.status === 'SUCCESS') {
+                    const fulfilledQty = consumptionResult.consumedLogs.reduce((sum, log) => sum + log.consumedQuantity, 0);
+                    salesInvoiceItems.push({ 
+                        medicineId: medicineCode, 
+                        requestedQuantity: requestedQuantity,
+                        fulfilledQuantity: fulfilledQty,
+                        pricePerUnit: itemPrice, 
+                        totalPrice: fulfilledQty * itemPrice,
+                        sourceLogIds: consumptionResult.consumedLogs.map(log => ({ logId: log.logId, quantity: log.consumedQuantity }))
+                    });
+                    totalAmount += fulfilledQty * itemPrice;
+                } else {
+                    unfulfilledItems.push({ 
+                        medicineId: medicineCode, 
+                        requestedQuantity: requestedQuantity,
+                        fulfilledQuantity: 0, // Assuming 0 if not successful
+                        remainingQuantity: requestedQuantity,
+                        message: consumptionResult.message || 'Consumption failed for this item.' 
+                    });
+                }
+            } catch (e) {
+                // Catch errors from consumeQuantity and record as unfulfilled
+                console.error(`Error processing item ${medicineCode} in prescription: ${e.message}`);
+                unfulfilledItems.push({ 
+                    medicineId: medicineCode, 
+                    requestedQuantity: requestedQuantity,
+                    fulfilledQuantity: 0,
+                    remainingQuantity: requestedQuantity,
+                    message: `Error during consumption: ${e.message}` 
+                });
+            }
+        }
+
+        // Determine overall invoice status
+        const salesInvoice = {
+            docType: 'SalesInvoice',
+            invoiceId: invoiceId,
+            consumerId: consumerId,
+            locationId: locationId,
+            timestamp: saleTimestamp,
+            items: salesInvoiceItems,
+            totalAmount: totalAmount,
+            status: unfulfilledItems.length === 0 ? 'COMPLETED' : 'PARTIALLY_FULFILLED',
+            unfulfilledItems: unfulfilledItems
+        };
+
+        await ctx.stub.putState(invoiceId, Buffer.from(JSON.stringify(salesInvoice)));
+        console.info(`--- Sales Invoice ${invoiceId} created. Status: ${salesInvoice.status} ---`);
+        return JSON.stringify(salesInvoice); // Return the invoice record as JSON string
+    }
+
+    /**
+     * Truy vấn tất cả các bản ghi hóa đơn bán hàng (SalesInvoice).
+     * @param {Context} ctx The transaction context
+     * @returns {Array<Object>} Mảng các bản ghi SalesInvoice.
+     */
+    async getSalesInvoices(ctx) {
+        console.info('--- Bắt đầu truy vấn getSalesInvoices ---');
+        this._requireMSP(ctx, ['ManufacturerMSP', 'PharmacyMSP', 'StorageAMSP', 'StorageBMSP']);
+
+        const iterator = await ctx.stub.getStateByRange('', '');
+        const results = [];
+
+        while (true) {
+            const res = await iterator.next();
+            if (res.value && res.value.value.toString()) {
+                let record;
+                try {
+                    record = JSON.parse(res.value.value.toString('utf8'));
+                    if (record.docType === 'SalesInvoice') {
+                        results.push(record);
+                    }
+                } catch (err) {
+                    console.error(`Lỗi phân tích bản ghi: ${err}`);
+                }
+            }
+            if (res.done) {
+                await iterator.close();
+                break;
+            }
+        }
+
+        console.info(`--- Tìm thấy ${results.length} bản ghi hóa đơn bán hàng ---`);
+        return results;
+    }
+
 
     /**
      * Truy xuất một bản ghi thuốc duy nhất bằng ID log của nó.
