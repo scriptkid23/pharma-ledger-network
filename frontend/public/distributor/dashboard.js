@@ -89,20 +89,20 @@ async function getInventory() {
 }
 
 // Fetch distributor's inventory (Needs a specific API endpoint)
-async function getDistributorInventory() {
+async function getDistributorInventory(userId, token, port) {
     try {
-        const response = await fetch(`http://${ip.host}:${ip.backend}/api/getAllMedicines`, { // ASSUMED API Endpoint
+        const response = await fetch(`http://${ip.host}:${ip.backend}/api/getMedicinesByStorage`, { // ASSUMED API Endpoint
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify()
+            body: JSON.stringify({distributorId: userId, token, port})
         });
         const data = await response.json();
         if (!response.ok) {
             throw new Error(data.error || 'Lỗi khi lấy kho thuốc nhà phân phối');
         }
-        distributorInventory = data.response || [];
+        distributorInventory = data || [];
         
     } catch (error) {
         console.error("Error fetching distributor inventory:", error);
@@ -112,14 +112,14 @@ async function getDistributorInventory() {
 }
 
 // Fetch pharmacy requests for this distributor (Needs a specific API endpoint)
-async function getPharmacyRequests() {
+async function getPharmacyRequests(token) {
     try {
         const response = await fetch(`http://${ip.host}:${ip.backend}/api/getPharmacyRequests`, { // ASSUMED API Endpoint
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify()
+            body: JSON.stringify({token, port: ip.storagea})
         });
         const data = await response.json();
         if (!response.ok) {
@@ -158,7 +158,7 @@ async function getTokenById(id, secret, port) {
 }
 
 // Fetch detailed medicine history by Log ID (generic function, useful for tracking tab)
-async function getMedicineByLogId(logId) {
+async function getMedicineByLogId(logId, token, port) {
   if (medicineHistory[logId]) {
       return medicineHistory[logId]; // Return cached data if available
   }
@@ -168,7 +168,7 @@ async function getMedicineByLogId(logId) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ logId })
+        body: JSON.stringify({ logId, token, port })
       });
       const data = await response.json();
       if (!response.ok) {
@@ -262,10 +262,10 @@ function loadMedicinesData() {
 }
 
 // Load data specific to the distributor role
-async function loadDistributorData(userId) {
+async function loadDistributorData(userId, token) {
     await getInventory(); // Fetch/update inventory
-    await getDistributorInventory(); // Fetch/update inventory
-    await getPharmacyRequests(); // Fetch/update requests
+    await getDistributorInventory(userId, token, ip.storagea); // Fetch/update inventory
+    await getPharmacyRequests(token); // Fetch/update requests
 
     loadDistributorInventoryTable(userId);
     loadPharmacyRequestsTable(userId);
@@ -410,8 +410,8 @@ function setupDistributorEventListeners(userId) {
                 alert('Vui lòng nhập Mã ghi nhận và chọn Kho.');
                 return;
             }
-
-            medicineHistory[logId] = await getMedicineByLogId(logId); // Fetch history for this log ID
+            const token = await getTokenById("storagea", "storageapw", ip.storagea);
+            medicineHistory[logId] = await getMedicineByLogId(logId, token, ip.storagea); // Fetch history for this log ID
             const latestMedicine = medicineHistory[logId][medicineHistory[logId].length - 1]; // Get the latest medicine info from history
             if (!latestMedicine) {
                 alert("Không tìm thấy thông tin thuốc")
@@ -419,7 +419,7 @@ function setupDistributorEventListeners(userId) {
             }
             // Call API to receive medicine
             try {
-                const token = await getTokenById("storagea", "storageapw", ip.storagea);
+                
                 const response = await fetch(`http://${ip.host}:${ip.backend}/api/transferMedicine`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -429,7 +429,8 @@ function setupDistributorEventListeners(userId) {
                         toId: storageId,
                         transferCompanyId: userId,
                         quantity: latestMedicine?.totalQuantity || latestMedicine.quantity, // Use totalQuantity if available, else quantity
-                        token
+                        token,
+                        port: ip.storagea
                     })
                 });
                 const data = await response.json();
@@ -437,8 +438,8 @@ function setupDistributorEventListeners(userId) {
 
                 alert('Nhập kho thành công!');
                 // Refresh inventory and potentially activity
-                await loadDistributorData(userId);
-                await loadManufacturerMedicines();
+                await loadDistributorData(userId, token);
+                await loadManufacturerMedicines(token);
                 document.getElementById('receive-medicine-form').reset();
             } catch (error) {
                 console.error("Error receiving medicine:", error);
@@ -464,14 +465,15 @@ function setupDistributorEventListeners(userId) {
                     body: JSON.stringify({
                         requestId: requestId,
                         approvedItemIndices: getSelectedItemIndexes(requestId),
-                        token
+                        token,
+                        port: ip.storagea
                     })
                 });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Lỗi khi xuất kho'); }
 
                 alert('Xuất kho thành công!');
-                await loadDistributorData(userId);
+                await loadDistributorData(userId, token);
                 document.getElementById('dispatch-medicine-form').reset();
             } catch (error) {
                 console.error("Error dispatching medicine:", error);
@@ -564,7 +566,7 @@ async function addRequestActionListeners() {
                     if (!response.ok) { throw new Error(data.error || 'Lỗi khi từ chối yêu cầu'); }
 
                     alert('Yêu cầu đã được từ chối.');
-                    await loadDistributorData(localStorage.getItem('userId')); // Reload data
+                    await loadDistributorData(localStorage.getItem('userId'), token); // Reload data
                 } catch (error) {
                     console.error("Error rejecting request:", error);
                     alert(`Lỗi khi từ chối yêu cầu: ${error.message}`);
@@ -844,19 +846,20 @@ window.handleImport = function(medicineId, logId) {
     }
 };
 
-function loadManufacturerMedicines() {
+function loadManufacturerMedicines(token) {
     const manufacturerId = document.getElementById('manufacturer-select').value;
     if (!manufacturerId) {
         renderManufacturerMedicines(0);
         return;
     }
-
-    fetch(`http://${ip.host}:${ip.backend}/api/medicines/by-manufacturer/${manufacturerId}`, {
+    fetch(`http://${ip.host}:${ip.backend}/api/getMedicinesByManufacturer`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manufacturerId: manufacturerId, token, port: ip.storagea})
     })
     .then(res => res.json())
     .then(medicines => {
+        console.log("Medicines by manufacturer:", medicines);
         renderManufacturerMedicines(medicines);
     })
     .catch(err => {
@@ -865,7 +868,8 @@ function loadManufacturerMedicines() {
     });
 }
 document.getElementById('manufacturer-select').addEventListener('change', async () => {
-    loadManufacturerMedicines();
+    const token = await getTokenById("storagea", "storageapw", ip.storagea);
+    loadManufacturerMedicines(token);
 });
 
 // --- Main Initialization --- 
@@ -877,7 +881,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const userRole = params.get("role");
   const userId = params.get("userId");
-
+    const token = await getTokenById("storagea", "storageapw", ip.storagea);
   const user = getUserById(userRole, userId);
   if (!userId || userRole !== "2") {
     alert("Bạn không có quyền truy cập vào trang này.");
@@ -894,7 +898,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadDashboardData();
   loadMedicinesData();
   loadManufacturersData();
-  await loadDistributorData(userId);
+  await loadDistributorData(userId, token);
 });
 
 

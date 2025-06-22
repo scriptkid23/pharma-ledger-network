@@ -59,17 +59,18 @@ async function getDataMedicine() {
 }
 
 // Fetch logs of medicines created (likely by any manufacturer, might need filtering later)
-async function getDataMedicineCreate() {
+async function getDataMedicineCreate(userId, token) {
   try {
-      await fetch(`http://${ip.host}:${ip.backend}/api/getAllMedicines`, {
+      await fetch(`http://${ip.host}:${ip.backend}/api/getMedicinesByManufacturer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ manufacturerId: userId, token, port: ip.fablo}) // Assuming '1' is the ID for the manufacturer role
       })
         .then(res => res.json())
         .then(data => {
-          medicineCraete = data.response || []; // Ensure it's an array
+          medicineCraete = data || []; // Ensure it's an array
         })
   } catch(err) {
        console.error('Lỗi fetch lịch sử tạo thuốc:', err);
@@ -279,7 +280,7 @@ function setupTabNavigation() {
   document.querySelectorAll('.tab-link[data-tab="manufacturer"]').forEach(link => link.classList.add('is-active'));
 }
 
-function setupManufacturerEventListeners(userId) {
+function setupManufacturerEventListeners(userId, token) {
   const generateBtn = document.getElementById("generate-medicine-button");
   if (generateBtn) {
       generateBtn.addEventListener("click", async () => {
@@ -301,9 +302,6 @@ function setupManufacturerEventListeners(userId) {
             alert("Lỗi: Không xác định được mã nhà sản xuất.");
             return;
         }
-
-        // Get token
-        const token = await getTokenById("admin", "adminpw"); // Use appropriate credentials
         if (!token) return; // Stop if token fetch failed
 
         // Call API
@@ -333,7 +331,7 @@ function setupManufacturerEventListeners(userId) {
           alert("Tạo thuốc thành công! Log ID: " + data.response.logId); // Assuming API returns logId
           
           // Refresh manufacturer data
-          await getDataMedicineCreate(); // Re-fetch the created medicine list
+          await getDataMedicineCreate(userId, token); // Re-fetch the created medicine list
           loadManufacturerData(userId);
 
           // Clear form
@@ -614,6 +612,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const roleId = params.get("role");
   const userId = params.get("userId");
+  const token = await getTokenById("admin", "adminpw"); // Get token for manufacturer actions
 
   // Basic validation
   if (roleId !== "1") { // Ensure this is the manufacturer dashboard
@@ -630,9 +629,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Fetch initial data
   await getData(); // Get manufacturer list
   await getDataMedicine(); // Get general medicine definitions
-  await getDataMedicineCreate(); // Get created medicine logs
+  await getDataMedicineCreate(userId, token); // Get created medicine logs
 
   const user = getUserById(roleId, userId);
+  
   if (!user) {
     alert("Không tìm thấy thông tin người dùng cho mã ID này.");
     window.location.href = "../index.html";
@@ -652,7 +652,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadManufacturerData(userId); // Load manufacturer-specific production list
 
   // Setup event listeners for manufacturer actions and tracking tab
-  setupManufacturerEventListeners(userId);
+  setupManufacturerEventListeners(userId, token);
   setupTrackingEventListeners(); 
 
 });

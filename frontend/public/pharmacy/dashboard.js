@@ -78,7 +78,7 @@ async function getPharmacyInventory(pharmacyId, token) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ pharmacyId, token })
+            body: JSON.stringify({ pharmacyId, token, port: ip.pharmacy })
         });
         const data = await response.json();
         if (!response.ok) {
@@ -308,7 +308,7 @@ function loadPharmacyInventoryTable(userId) {
     });
 }
 
-async function handleSell(medicineId, userId, button) {
+async function handleSell(medicineId, userId, button, token) {
   const row = button.closest("tr");
   const phoneInput = row.querySelector("input[name='phone']");
   const quantityInput = row.querySelector("input[name='buyQuantity']");
@@ -349,7 +349,8 @@ async function handleSell(medicineId, userId, button) {
       consumerId: phone,
       quantity,
       price,
-      token: await getTokenById("pharmacy", "pharmacypw")
+      token,
+      port: ip.pharmacy // Port for pharmacy service
     })
   });
 
@@ -471,7 +472,7 @@ function setupPharmacyEventListeners(userId, token) {
                 const response = await fetch(`http://${ip.host}:${ip.backend}/api/createPharmacyRequest`, { // ASSUMED API Endpoint
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pharmacyId: userId, distributorId, items, token })
+                    body: JSON.stringify({ pharmacyId: userId, distributorId, items, token, port: ip.pharmacy })
                 });
                 const data = await response.json();
                 if (!response.ok) { throw new Error(data.error || 'Lỗi khi tạo yêu cầu nhập thuốc'); }
@@ -771,7 +772,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll('.btn-sell').forEach(button => {
     button.addEventListener('click', () => {
         const medicineId = button.dataset.medicineId;
-        handleSell(medicineId, userId, button);
+        handleSell(medicineId, userId, button, token);
     });
     });
 });

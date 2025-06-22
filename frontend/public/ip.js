@@ -1,5 +1,5 @@
 export const ip = {
-	host: "10.10.2.156",
+	host: "192.168.1.37",
   backend: "3001",
   frontend: "8080",
   fablo: "8801",

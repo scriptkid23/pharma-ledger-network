@@ -153,44 +153,18 @@
                     
                     <!-- Patient Tab -->
                     <div class="tab-content" id="patient"> <!-- Default visible tab -->
+                        <div class="level">
+                        <div class="level-left">
                         <h1 class="title">Đơn hàng đã đặt của bạn</h1>
-                        
-                        <div class="box is-hidden">
-                            <h2 class="subtitle">Đơn thuốc cần phê duyệt</h2>
-                            <table class="table is-fullwidth is-striped is-hoverable">
-                                <thead>
-                                    <tr>
-                                        <th>Mã đơn thuốc</th>
-                                        <th>Bác sĩ</th>
-                                        <th>Ngày tạo</th>
-                                        <th>Chi tiết</th>
-                                        <th>Hành động</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="patient-pending-prescriptions">
-                                    <!-- Dynamic content: List of prescriptions waiting for patient approval -->
-                                </tbody>
-                            </table>
                         </div>
-
-                        <div class="box is-hidden">
-                            <h2 class="subtitle">Đơn thuốc đã phê duyệt</h2>
-                             <table class="table is-fullwidth is-striped is-hoverable">
-                                <thead>
-                                    <tr>
-                                        <th>Mã đơn thuốc</th>
-                                        <th>Bác sĩ</th>
-                                        <th>Ngày tạo</th>
-                                        <th>Chi tiết</th>
-                                        <th>Hành động</th> <!-- e.g., Create Order -->
-                                    </tr>
-                                </thead>
-                                <tbody id="patient-approved-prescriptions">
-                                    <!-- Dynamic content: List of prescriptions approved by patient -->
-                                </tbody>
-                            </table>
+                        <div class="level-right">
+                            <div class="select is-rounded is-link">
+                                <select id="pharmacyFilter">
+                                    <option value="0" disabled selected hidden>-- Chọn nhà thuốc --</option>
+                                </select>
+                            </div>
                         </div>
-
+                    </div>
                         <div class="box">
                             <h2 class="subtitle">Đơn hàng đã đặt</h2>
                             <table class="table is-fullwidth is-striped is-hoverable">

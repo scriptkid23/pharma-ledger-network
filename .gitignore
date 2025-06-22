@@ -1,0 +1,41 @@
+# Node.js & Go modules
+node_modules/
+go/pkg/
+go/bin/
+
+# Chaincode Go build
+*.out
+*.exe
+*.mod
+*.sum
+
+# Fabric build artifacts
+*.block
+*.tx
+*.pem
+*.crt
+*.key
+
+# Crypto material
+crypto-config/
+organizations/
+system-genesis-block/
+channel-artifacts/
+
+# Docker
+docker-compose-*.yaml
+docker/
+*.tar.gz
+
+# Env và log
+.env
+*.log
+*.tmp
+
+# fablo
+fablo-target/
+
+# VSCode & OS
+.vscode/
+.DS_Store
+Thumbs.db

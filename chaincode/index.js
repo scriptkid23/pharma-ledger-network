@@ -83,7 +83,7 @@ class SupplyChainContract extends Contract {
      * @returns {string} Chuỗi JSON của bản ghi thuốc mới biểu thị việc nhập kho.
      */
     async transferQuantity(ctx, parentLogId, fromId, toId, transferCompanyId, quantity) {
-        this._requireMSP(ctx, ['ManufacturerMSP', 'StorageAMSP', 'StorageBMSP']);
+        this._requireMSP(ctx, ['StorageAMSP', 'StorageBMSP']);
 
         const medicineBytes = await ctx.stub.getState(parentLogId);
         if (!medicineBytes || medicineBytes.length === 0) {
@@ -167,7 +167,7 @@ class SupplyChainContract extends Contract {
      * @returns {string} Chuỗi JSON của yêu cầu đã tạo.
      */
     async createPharmacyRequest(ctx, pharmacyId, distributorId, itemsJsonString) {
-        this._requireMSP(ctx, ['ManufacturerMSP', 'PharmacyMSP']);
+        this._requireMSP(ctx, ['PharmacyMSP']);
 
         let items;
         try {
@@ -220,12 +220,12 @@ class SupplyChainContract extends Contract {
      */
     async approvePharmacyRequest(ctx, requestId, comfingRequest) {
         console.log(`[DEBUG] Bắt đầu approvePharmacyRequest cho Request ID: ${requestId}`);
-        this._requireMSP(ctx, ['ManufacturerMSP', 'StorageAMSP', 'StorageBMSP']);
+        this._requireMSP(ctx, ['StorageAMSP', 'StorageBMSP']);
 
         const requestBytes = await ctx.stub.getState(requestId);
         if (!requestBytes || requestBytes.length === 0) {
             console.error(`[DEBUG] Lỗi: Yêu cầu ID ${requestId} không tồn tại.`);
-            throw new Error(`❌ Yêu cầu ID ${requestId} không tồn tại.`);
+            throw new Error(`Yêu cầu ID ${requestId} không tồn tại.`);
         }
 
         const request = JSON.parse(requestBytes.toString());
@@ -234,7 +234,7 @@ class SupplyChainContract extends Contract {
 
         if (request.status !== 'PENDING') {
             console.error(`[DEBUG] Lỗi: Yêu cầu ${requestId} đã được xử lý rồi (trạng thái: ${request.status}).`);
-            throw new Error(`❌ Yêu cầu ${requestId} đã được xử lý rồi (trạng thái: ${request.status}).`);
+            throw new Error(`Yêu cầu ${requestId} đã được xử lý rồi (trạng thái: ${request.status}).`);
         }
 
         let approvedItemIndices;
@@ -440,7 +440,7 @@ class SupplyChainContract extends Contract {
         request.approvedAt = new Date().toISOString();
         await ctx.stub.putState(requestId, Buffer.from(JSON.stringify(request)));
 
-        console.info(`✅ Yêu cầu ${requestId} đã được xử lý. Trạng thái tổng thể: ${request.status}`);
+        console.info(`Yêu cầu ${requestId} đã được xử lý. Trạng thái tổng thể: ${request.status}`);
         console.log(`[DEBUG] Chi tiết các mục sau xử lý: ${JSON.stringify(request.items)}`);
         console.log(`[DEBUG] Các giao dịch giao hàng đã tạo: ${JSON.stringify(createdDeliveryTransactions)}`);
 
@@ -466,7 +466,7 @@ class SupplyChainContract extends Contract {
      * @returns {string} Chuỗi JSON tóm tắt các bản ghi đã được tiêu thụ.
      */
     async consumeQuantity(ctx, medicineId, locationId, consumerId, quantity, price, batchId = null) {
-        this._requireMSP(ctx, ['ManufacturerMSP', 'PharmacyMSP']);
+        this._requireMSP(ctx, ['PharmacyMSP']);
 
         const amountToConsume = Number(quantity);
         const numericPrice = Number(price);
@@ -544,7 +544,7 @@ class SupplyChainContract extends Contract {
             throw new Error(`Không đủ thuốc để tiêu thụ. Cần thêm ${remainingToConsume} đơn vị. Tổng số lượng có sẵn còn lại là ${totalAvailable}.`);
         }
 
-        console.info(`✅ Thuốc ${medicineId} đã được tiêu thụ thành công tại ${locationId}.`);
+        console.info(`Thuốc ${medicineId} đã được tiêu thụ thành công tại ${locationId}.`);
         return JSON.stringify({
             status: 'SUCCESS',
             message: `Đã tiêu thụ ${amountToConsume} đơn vị thuốc ${medicineId} tại ${locationId}.`,

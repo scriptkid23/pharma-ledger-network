@@ -5,7 +5,7 @@ import { ip } from '../ip.js';
 let userData = {
   // 1: [], // Manufacturers (Might need for displaying names in history)
   // 2: [], // Distributors (Might need for displaying names in history)
-  // 3: [], // Pharmacies - Will be populated by getData (for creating orders)
+  3: [], // Pharmacies - Will be populated by getData (for creating orders)
   5: [], // Patients - Will be populated by getData
 };
 
@@ -19,7 +19,7 @@ let patientOrders = []; // Store orders placed by this patient
 // Fetch patient, doctor, and pharmacy lists (and potentially others for names in history)
 async function getData() {
   try {
-    const nt = await fetch(`http://${ip.host}:${ip.backend}/api/getBenhNhan`).then(res => res.json());
+    const nt = await fetch(`http://${ip.host}:${ip.backend}/api/getNhaThuoc`).then(res => res.json());
     userData[3] = nt.map(item => ({ id: item.MA_NHA_THUOC, name: item.TEN_NHA_THUOC }));
   } catch (error) {
     console.error("Error fetching user data:", error);
@@ -59,14 +59,15 @@ async function getDataMedicine() {
 }
 
 // Fetch orders placed by this patient (Needs a specific API endpoint)
-async function getPatientOrders(patientId) {
+async function getPatientOrders(patientId, pharmacyId) {
+    console.log(patientId, pharmacyId)
     try {
         const response = await fetch(`http://${ip.host}:${ip.backend}/api/getPatientPurchaseHistory`, { // ASSUMED API Endpoint
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ patientId })
+            body: JSON.stringify({ patientId, pharmacyId })
         });
         const data = await response.json();
         if (!response.ok) {
@@ -151,6 +152,30 @@ function getRoleName(roleId) {
 
 // --- UI Population Functions --- 
 
+async function loadPharmacyOptions() {
+  try {
+    const pharmacies = userData[3] || [];
+    console.log("Pharmacies loaded:", pharmacies);
+    
+    const select = document.getElementById('pharmacyFilter');
+
+    pharmacies.forEach(pharmacy => {
+      // Check trùng trước khi thêm (nếu cần)
+      if (!Array.from(select.options).some(opt => opt.value === pharmacy.id)) {
+        const option = document.createElement('option');
+        option.value = pharmacy.id;
+        option.textContent = pharmacy.name;
+        select.appendChild(option);
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Lỗi khi fetch danh sách nhà thuốc:', err.message);
+  }
+}
+
+
+
 // Load general dashboard stats (kept for overview tab)
 function loadDashboardData() {
   // Adjust stats for patient context
@@ -172,14 +197,16 @@ function loadDashboardData() {
 
 // Load data specific to the patient role
 async function loadPatientData(userId) {
-    await getPatientOrders(userId); // Fetch/update orders
-    loadPatientOrdersTable(userId);
-}
-
-function loadPatientOrdersTable(userId) {
     const ordersTableBody = document.getElementById('patient-orders');
     ordersTableBody.innerHTML = ''; // Clear table
-
+    const selectPharmacyFilter = document.getElementById('pharmacyFilter').value;
+    console.log("Selected Pharmacy Filter:", selectPharmacyFilter);
+    if (selectPharmacyFilter == '0') {
+        ordersTableBody.inertHTML = '<tr><td colspan="5">Chọn nhà thuốc.</td></tr>';
+        return;
+    }
+    await getPatientOrders(userId, selectPharmacyFilter); // Fetch/update orders
+ 
     if (patientOrders.length === 0) {
         ordersTableBody.innerHTML = '<tr><td colspan="5">Chưa đặt đơn hàng nào.</td></tr>';
         return;
@@ -502,6 +529,11 @@ function handleViewOrderDetails(txId) {
     console.log("🔍 Đã chuyển sang tab theo dõi và tìm kiếm đơn hàng")
 }
 
+document.getElementById('pharmacyFilter').addEventListener('change', () => {
+    const params = new URLSearchParams(window.location.search);
+  loadPatientData(params.get("userId"));
+});
+
 
 // --- Main Execution --- 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -516,7 +548,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('user-name').textContent = `Tên: ${userId}`;
-
   // Fetch initial data
   await getData(); // Fetch pharmacies for display
   await getDataMedicine(); // Fetch general medicine info
@@ -527,6 +558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load dashboard stats (after patient data is loaded)
   loadDashboardData();
+  loadPharmacyOptions();
 
   // Setup event listeners
   setupTrackingEventListeners(); 

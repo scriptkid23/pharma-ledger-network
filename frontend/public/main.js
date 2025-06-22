@@ -24,7 +24,7 @@ async function getData() {
     const nt = await fetch(`http://${ip.host}:${ip.backend}/api/getNhaThuoc`).then(res => res.json());
     const bn = await fetch(`http://${ip.host}:${ip.backend}/api/getBenhNhan`).then(res => res.json());
     console.log(1)
-    // ✅ Luôn giữ dạng MẢNG
+    // Luôn giữ dạng MẢNG
     userData[1] = nsx.map(item => ({
       id: item.MA_NHASX,
       name: item.TEN_NHASX
